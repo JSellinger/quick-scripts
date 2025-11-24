@@ -71,3 +71,11 @@ def DB_to_EXCEL_Path(db_file_path):
     finally:
         if 'conn' in locals() and conn:
             conn.close()
+
+# --- EXECUTION BLOCK ---
+if __name__ == "__main__":
+    # Use a raw string (r'...') to handle Windows backslashes correctly in the path
+    INPUT_PATH = r"C:\Users\jacob\Downloads\smart_sales_PowerBI.db" 
+
+    # Call the function to start the conversion
+    DB_to_EXCEL_Path(INPUT_PATH)

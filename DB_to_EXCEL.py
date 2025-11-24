@@ -1,61 +1,73 @@
 
-def DB_to_EXCEL(your_database, full_export_database_name):
-    import sqlite3
-    import pandas as pd
-    import os
+import sqlite3
+import pandas as pd
+import os
 
-    # --- Configuration ---
-    DATABASE_FILE = your_database # Replace with your .db file name
-    OUTPUT_FILE = full_export_database_name # The name for your new Excel file
+def DB_to_EXCEL_Path(db_file_path):
+    """
+    Connects to an SQLite database file using its full path, extracts all tables, 
+    and writes each table as a separate sheet in an Excel file saved to the 
+    same directory as the input file.
 
-    # --- Main Logic ---
-    print(f"Starting export for database: {DATABASE_FILE}")
+    Args:
+        db_file_path (str): The full path to the SQLite .db file.
+    """
+    
+    # 1. Determine the paths for the input and output files
+    # os.path.split() separates the directory path and the file name
+    directory, filename = os.path.split(db_file_path)
+    
+    # Create the output file name by replacing the extension
+    base_name, _ = os.path.splitext(filename)
+    output_filename = f"{base_name}.xlsx"
+    
+    # Construct the full output path
+    output_file_path = os.path.join(directory, output_filename)
+
+    print(f"--- Starting export for database: **{db_file_path}** ---")
+    print(f"Saving output to: **{output_file_path}**")
+    print("-" * 50)
 
     try:
-        # 1. Connect to the SQLite database
-        conn = sqlite3.connect(DATABASE_FILE)
+        # 2. Connect to the SQLite database
+        # Note: You should use raw strings (r'...') or double backslashes ('\\') 
+        # when defining Windows paths in Python, but here we assume the 
+        # input variable is handled correctly by the caller.
+        conn = sqlite3.connect(db_file_path)
 
-        # 2. Get a list of all table names in the database
-        # The 'sqlite_master' table contains metadata about all tables.
+        # 3. Get a list of all table names
         table_query = "SELECT name FROM sqlite_master WHERE type='table';"
         tables = pd.read_sql_query(table_query, conn)['name'].tolist()
 
         if not tables:
-            print("❌ No tables found in the database. Nothing to export.")
-            conn.close()
-            exit()
+            print(f"❌ No tables found in '{db_file_path}'. Nothing to export.")
+            return
 
-        print(f"✅ Found the following tables to export: {', '.join(tables)}")
-        print("-" * 30)
+        print(f"✅ Found {len(tables)} tables: {', '.join(tables)}")
 
-        # 3. Create an Excel Writer object to handle multiple sheets
-        # We recommend using 'xlsxwriter' for performance if you have many tables/large data.
-        with pd.ExcelWriter(OUTPUT_FILE, engine='xlsxwriter') as writer:
+        # 4. Create an Excel Writer object
+        with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
             
-            # 4. Loop through each table, read it into a DataFrame, and write it to a sheet
+            # 5. Loop through each table and write it to a sheet
             for table_name in tables:
-                print(f"Exporting table: **{table_name}**...")
+                print(f"  -> Exporting table: **{table_name}**...")
                 
-                # Read all columns and rows from the current table
                 df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
-                
-                # Write the DataFrame to a sheet named after the table
-                # index=False prevents writing the DataFrame index as a column
                 df.to_excel(writer, sheet_name=table_name, index=False)
                 
-                print(f"   -> Wrote {len(df)} rows to sheet '{table_name}'.")
+                print(f"     -> Wrote {len(df)} rows.")
 
-        print("-" * 30)
-        print(f"💾 **SUCCESS!** All data exported to Excel file: {os.path.abspath(OUTPUT_FILE)}")
+        print("-" * 50)
+        print(f"🎉 **SUCCESS!** All tables exported to: {os.path.abspath(output_file_path)}")
+        print("-" * 50)
 
+    except FileNotFoundError:
+        print(f"❌ Error: Database file not found at '{db_file_path}'.")
     except sqlite3.OperationalError as e:
         print(f"❌ Database Error: {e}")
-        print("Please check your database file name.")
     except Exception as e:
         print(f"❌ An unexpected error occurred: {e}")
 
     finally:
-        # Close the database connection
         if 'conn' in locals() and conn:
             conn.close()
-            print("Connection closed.")

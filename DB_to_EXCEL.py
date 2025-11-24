@@ -1,9 +1,9 @@
 
-import sqlite3
-import pandas as pd
-import os
 
 def DB_to_EXCEL_Path(db_file_path):
+    import sqlite3
+    import pandas as pd
+    import os
     """
     Connects to an SQLite database file using its full path, extracts all tables, 
     and writes each table as a separate sheet in an Excel file saved to the 
